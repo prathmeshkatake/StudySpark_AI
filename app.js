@@ -6,7 +6,6 @@ let quizState = { currentQuestionIndex: 0, score: 0 };
 // Load API keys from local storage (Setup Panel)
 let apiFleet = JSON.parse(localStorage.getItem('studyspark_api_fleet') || '[]');
 let currentApiIndex = 0;
-let currentApiIndex = 0;
 
 // History State
 let sessions = JSON.parse(localStorage.getItem('studyspark_history') || '[]');
