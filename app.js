@@ -124,7 +124,7 @@ async function callGeminiAPI(prompt, isJson = false) {
     let lastErrorMsg = "Unknown Error";
     while (attempts < apiFleet.length) {
         const apiKey = apiFleet[currentApiIndex].replace(/['"]/g, '').trim();
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
         
         const requestBody = {
             contents: [{ parts: [{ text: prompt }] }],
