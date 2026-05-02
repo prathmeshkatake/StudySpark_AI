@@ -121,8 +121,9 @@ async function callGeminiAPI(prompt, isJson = false) {
     }
 
     let attempts = 0;
+    let lastErrorMsg = "Unknown Error";
     while (attempts < apiFleet.length) {
-        const apiKey = apiFleet[currentApiIndex];
+        const apiKey = apiFleet[currentApiIndex].replace(/['"]/g, '').trim();
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
         
         const requestBody = {
@@ -140,7 +141,7 @@ async function callGeminiAPI(prompt, isJson = false) {
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error?.message || `HTTP ${response.status}`);
+                throw new Error(errData.error?.message || `HTTP ${response.status} from Google`);
             }
 
             const data = await response.json();
@@ -148,14 +149,12 @@ async function callGeminiAPI(prompt, isJson = false) {
             
         } catch (error) {
             console.warn(`Local Key ${currentApiIndex + 1} failed:`, error.message);
-            // Switch to next key for ANY error (expired, invalid, rate limit)
+            lastErrorMsg = error.message;
             currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
             attempts++;
-            // Show the EXACT error from Google
-            showToast(`Key Failed: ${error.message}`, 'error');
         }
     }
-    throw new Error('All local API keys exhausted or invalid. Please add fresh keys in the API Setup tab.');
+    throw new Error(`Google API Error: ${lastErrorMsg}`);
 }
 
 
