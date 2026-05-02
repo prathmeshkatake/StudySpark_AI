@@ -3,23 +3,9 @@ let currentTab = 'upload';
 let generatedData = { summary: null, flashcards: null, quiz: null };
 let quizState = { currentQuestionIndex: 0, score: 0 };
 
-// Hardcoded Default API Fleet (100% SECURE FROM SCANNERS)
-// Keys are encoded in Base64 so bots cannot read them.
-// To add a key: 
-// 1. Go to https://www.base64encode.org/
-// 2. Paste your Google API Key, click Encode, and paste the result below.
-const hardcodedKeys = [
-    "PASTE_BASE64_KEY_1_HERE",
-    "PASTE_BASE64_KEY_2_HERE",
-    "PASTE_BASE64_KEY_3_HERE",
-    "PASTE_BASE64_KEY_4_HERE"
-].filter(k => k && !k.includes("PASTE_BASE64")).map(k => atob(k));
-
-// Load from local storage first (Admin Panel), otherwise use the hardcoded keys
+// Load API keys from local storage (Setup Panel)
 let apiFleet = JSON.parse(localStorage.getItem('studyspark_api_fleet') || '[]');
-if (apiFleet.length === 0) {
-    apiFleet = hardcodedKeys;
-}
+let currentApiIndex = 0;
 let currentApiIndex = 0;
 
 // History State
@@ -33,12 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedFleet = localStorage.getItem('studyspark_api_fleet');
     if (savedFleet) apiFleet = JSON.parse(savedFleet);
 
-    const savedPwd = localStorage.getItem('app_password');
-    if (savedPwd) document.getElementById('app-password-input').value = savedPwd;
-    
-    document.getElementById('app-password-input').addEventListener('change', (e) => {
-        localStorage.setItem('app_password', e.target.value.trim());
-    });
+
 
     renderHistoryList();
     renderApiAdminList();
@@ -73,15 +54,7 @@ function switchTab(tabId) {
     currentTab = tabId;
 }
 
-function togglePasswordVisibility() {
-    const input = document.getElementById('app-password-input');
-    const icon = document.getElementById('pwd-eye-icon');
-    if (input.type === 'password') {
-        input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash');
-    } else {
-        input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye');
-    }
-}
+
 
 function clearNotes() {
     document.getElementById('notes-input').value = '';
@@ -141,36 +114,10 @@ async function handleFileUpload(event) {
     event.target.value = '';
 }
 
-// --- Secure API Call via Google Apps Script Proxy ---
-const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbzL_lHtlWjyEeT8cQYyy1ITCNP_yDVxQX-d75eE5ZNB-wdf3CMHBp1BmCKygjtN62nS/exec';
-
+// --- API Call Logic (Local Key Only) ---
 async function callGeminiAPI(prompt, isJson = false) {
-    let proxyErrorMsg = '';
-    try {
-        // Try the Google Apps Script Proxy first
-        const response = await fetch(GAS_PROXY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ prompt, isJson }),
-            redirect: 'follow'
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (!data.error) return data.text;
-            proxyErrorMsg = data.error;
-        } else {
-            proxyErrorMsg = `Server error: ${response.status}`;
-        }
-    } catch (error) {
-        proxyErrorMsg = error.message;
-    }
-
-    console.warn('GAS Proxy failed, trying local Admin keys...', proxyErrorMsg);
-
-    // Fallback: Try local keys from Admin Panel (stored in localStorage)
     if (apiFleet.length === 0) {
-        showToast(`Server failed (${proxyErrorMsg}) and no local keys found. Add keys in API Admin tab.`, 'error');
+        showToast('No API key found. Please go to the API Setup tab to add your free Google API key.', 'error');
         throw new Error('No API keys configured.');
     }
 
@@ -205,20 +152,16 @@ async function callGeminiAPI(prompt, isJson = false) {
             // Switch to next key for ANY error (expired, invalid, rate limit)
             currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
             attempts++;
-            showToast(`Key failed. Auto-switching to backup key (${attempts}/${apiFleet.length})...`, 'info');
+            showToast(`API Limit Reached or Key Invalid. Please go to API Setup to add a new key.`, 'error');
         }
     }
-    throw new Error('All local API keys exhausted or invalid. Please add fresh keys in the Admin Panel.');
+    throw new Error('All local API keys exhausted or invalid. Please add fresh keys in the API Setup tab.');
 }
 
 
 // --- Core Processing Pipeline ---
 async function processNotes() {
-    const pwd = document.getElementById('app-password-input').value.trim();
-    if (pwd !== '12341234') {
-        showToast('Incorrect App Password. Please enter the correct password to unlock.', 'error');
-        return;
-    }
+
 
     const notes = document.getElementById('notes-input').value.trim();
     if (notes.length < 50) return showToast('Notes are too short.', 'error');
@@ -410,17 +353,7 @@ function exportWordDoc() {
 
 
 
-// --- Admin Panel Logic ---
-function unlockAdmin() {
-    const pwd = document.getElementById('admin-pwd-input').value;
-    if (pwd === '12341234') {
-        document.getElementById('admin-auth-wall').classList.add('hidden');
-        document.getElementById('admin-dashboard').classList.remove('hidden');
-        showToast('Admin Panel Unlocked', 'success');
-    } else {
-        showToast('Incorrect password', 'error');
-    }
-}
+// --- API Setup Logic ---
 
 function renderApiAdminList() {
     const list = document.getElementById('api-keys-list');
