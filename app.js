@@ -127,86 +127,35 @@ async function handleFileUpload(event) {
     event.target.value = '';
 }
 
-// --- Secure API Call via Vercel Proxy ---
+// --- Secure API Call via Google Apps Script Proxy ---
+const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbzL_lHtlWjyEeT8cQYyy1ITCNP_yDVxQX-d75eE5ZNB-wdf3CMHBp1BmCKygjtN62nS/exec';
+
 async function callGeminiAPI(prompt, isJson = false) {
-    // Try the secure server-side proxy first (keys stored in Vercel env vars)
     try {
-        const response = await fetch('/api/generate', {
+        // Use text/plain content-type to avoid CORS preflight (required for Google Apps Script)
+        const response = await fetch(GAS_PROXY_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, isJson })
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ prompt, isJson }),
+            redirect: 'follow'
         });
 
-        const data = await response.json(); // Read ONCE
-
-        if (response.ok) {
-            return data.text;
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `Server error: ${response.status}`);
         }
 
-        // Server has no keys configured (500) - fall through to local keys
-        if (response.status === 500) {
-            console.warn('Server has no keys, trying local keys...');
-        } else if (response.status === 429) {
-            // All server keys exhausted - fall through to local keys
-            console.warn('Server keys exhausted, trying local keys...');
-        } else {
-            // Real error (bad prompt, auth etc) - throw immediately
-            throw new Error(data.error || 'API request failed');
-        }
-    } catch (proxyError) {
-        // Only fall through if it's a network error, not our thrown errors
-        if (proxyError.message !== 'API request failed') {
-            console.warn('Proxy call failed, trying local keys...', proxyError.message);
-        } else {
-            throw proxyError;
-        }
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        return data.text;
+
+    } catch (error) {
+        console.error('GAS Proxy error:', error.message);
+        showToast(`Generation Failed: ${error.message}`, 'error');
+        throw error;
     }
-
-    // Fallback: Try local keys from Admin Panel (stored in localStorage)
-    if (apiFleet.length === 0) {
-        showToast('No API keys available! Please add keys in the API Admin tab or set Vercel env vars.', 'error');
-        throw new Error('No API keys configured.');
-    }
-
-    let attempts = 0;
-    while (attempts < apiFleet.length) {
-        const apiKey = apiFleet[currentApiIndex];
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        
-        const requestBody = {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.2 }
-        };
-        if (isJson) requestBody.generationConfig.responseMimeType = "application/json";
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
-
-            if (!response.ok) {
-                if (response.status === 429) throw new Error("QUOTA_EXCEEDED");
-                const errData = await response.json();
-                throw new Error(errData.error?.message || 'API request failed');
-            }
-
-            const data = await response.json();
-            return data.candidates[0].content.parts[0].text;
-            
-        } catch (error) {
-            if (error.message === "QUOTA_EXCEEDED" || error.message.includes("429")) {
-                currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
-                attempts++;
-                showToast('API Limit Reached. Switching to backup key...', 'info');
-            } else {
-                throw error;
-            }
-        }
-    }
-    throw new Error('All API keys exhausted. Try again in a minute.');
 }
+
 
 // --- Core Processing Pipeline ---
 async function processNotes() {
