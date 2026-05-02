@@ -309,7 +309,7 @@
         <section id="tab-admin" class="tab-content hidden max-w-4xl mx-auto animation-fade-in">
             <header class="mb-8">
                 <h2 class="text-3xl font-bold text-white mb-2">API Setup</h2>
-                <p class="text-slate-400">Bring your own Google API Key to use StudySpark AI for free.</p>
+                <p class="text-slate-400">Bring your own OpenRouter API Key to use StudySpark AI for free.</p>
             </header>
 
             <div class="bg-darkcard border border-slate-700/50 rounded-2xl p-8 shadow-xl glass-panel mb-8">
@@ -317,10 +317,10 @@
                     <i class="fa-solid fa-circle-question text-brand-400"></i> How to get a free API Key
                 </h3>
                 <ol class="list-decimal list-inside space-y-3 text-slate-300 text-sm leading-relaxed mb-6">
-                    <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-brand-400 hover:text-brand-300 underline font-medium">Google AI Studio</a>.</li>
+                    <li>Go to <a href="https://openrouter.ai/keys" target="_blank" class="text-brand-400 hover:text-brand-300 underline font-medium">OpenRouter.ai</a>.</li>
                     <li>Sign in with your Google account.</li>
-                    <li>Click the blue <strong>"Create API key"</strong> button.</li>
-                    <li>Copy the generated key (it usually starts with <code class="bg-slate-800 px-1 rounded text-brand-300">AIza...</code>).</li>
+                    <li>Click the <strong>"Create Key"</strong> button.</li>
+                    <li>Copy the generated key (it usually starts with <code class="bg-slate-800 px-1 rounded text-brand-300">sk-or-v1-...</code>).</li>
                     <li>Paste the key into the input box below and click <strong>Add Key</strong>.</li>
                 </ol>
                 <div class="p-4 bg-blue-900/20 border border-blue-800 rounded-lg flex items-start gap-3">
@@ -342,7 +342,7 @@
                 <div class="border-t border-slate-700/50 pt-6 mt-6">
                     <label class="block text-sm font-medium text-slate-300 mb-2">Add New API Key</label>
                     <div class="flex gap-3">
-                        <input type="text" id="new-api-key" placeholder="Paste your AIza... key here" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand-500 text-slate-200">
+                        <input type="text" id="new-api-key" placeholder="Paste your sk-or-v1-... key here" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand-500 text-slate-200">
                         <button onclick="addApiKey()" class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg shadow-brand-500/20"><i class="fa-solid fa-plus"></i> Add Key</button>
                     </div>
                 </div>

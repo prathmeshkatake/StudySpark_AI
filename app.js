@@ -114,38 +114,55 @@ async function handleFileUpload(event) {
 }
 
 // --- API Call Logic (Local Key Only) ---
-async function callGeminiAPI(prompt, isJson = false) {
+async function callOpenRouterAPI(prompt, isJson = false) {
     if (apiFleet.length === 0) {
-        showToast('No API key found. Please go to the API Setup tab to add your free Google API key.', 'error');
+        showToast('No API key found. Please go to the API Setup tab to add your free OpenRouter API key.', 'error');
         throw new Error('No API keys configured.');
     }
 
     let attempts = 0;
     let lastErrorMsg = "Unknown Error";
+    
+    // For JSON parsing with Llama 3, we append instructions since Llama 3 might not natively support responseMimeType
+    let finalPrompt = prompt;
+    if (isJson) {
+        finalPrompt += "\n\nIMPORTANT: Return ONLY raw, valid JSON. Do not include markdown formatting like ```json or any other text.";
+    }
+
     while (attempts < apiFleet.length) {
         const apiKey = apiFleet[currentApiIndex].replace(/['"]/g, '').trim();
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+        const url = `https://openrouter.ai/api/v1/chat/completions`;
         
         const requestBody = {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.2 }
+            model: "meta-llama/llama-3.3-70b-instruct:free",
+            messages: [{ role: "user", content: finalPrompt }],
+            temperature: 0.2
         };
-        if (isJson) requestBody.generationConfig.responseMimeType = "application/json";
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
                 body: JSON.stringify(requestBody)
             });
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error?.message || `HTTP ${response.status} from Google`);
+                throw new Error(errData.error?.message || `HTTP ${response.status} from OpenRouter`);
             }
 
             const data = await response.json();
-            return data.candidates[0].content.parts[0].text;
+            let textOutput = data.choices[0].message.content;
+            
+            if (isJson) {
+                // Clean up possible markdown code blocks often returned by Llama
+                textOutput = textOutput.replace(/```json/gi, '').replace(/```/g, '').trim();
+            }
+            
+            return textOutput;
             
         } catch (error) {
             console.warn(`Local Key ${currentApiIndex + 1} failed:`, error.message);
@@ -154,7 +171,7 @@ async function callGeminiAPI(prompt, isJson = false) {
             attempts++;
         }
     }
-    throw new Error(`Google API Error: ${lastErrorMsg}`);
+    throw new Error(`OpenRouter API Error: ${lastErrorMsg}`);
 }
 
 
@@ -177,7 +194,7 @@ async function processNotes() {
         // 1. Generate Summary
         switchTab('summary');
         showLoadingState('summary');
-        const summaryMarkdown = await callGeminiAPI(`Summarize the following study notes in Markdown format. Notes: ${notes}`);
+        const summaryMarkdown = await callOpenRouterAPI(`Summarize the following study notes in Markdown format. Notes: ${notes}`);
         generatedData.summary = summaryMarkdown;
         document.getElementById('summary-topic-title').innerText = topicName + " Summary";
         renderSummary(summaryMarkdown);
@@ -186,7 +203,7 @@ async function processNotes() {
         switchTab('flashcards');
         showLoadingState('flashcards');
         const flashcardPrompt = `Extract top 6 facts as flashcards. Format as JSON array: [{"q":"question","a":"answer"}]. Notes: ${notes}`;
-        const flashcards = JSON.parse(await callGeminiAPI(flashcardPrompt, true));
+        const flashcards = JSON.parse(await callOpenRouterAPI(flashcardPrompt, true));
         generatedData.flashcards = flashcards;
         renderFlashcards(flashcards);
 
@@ -194,7 +211,7 @@ async function processNotes() {
         switchTab('quiz');
         showLoadingState('quiz');
         const quizPrompt = `Create a ${quizCount}-question multiple choice quiz. Return JSON array: [{"question":"Q?","options":["A","B","C","D"],"correctIndex":1,"explanation":"Exp"}]. Notes: ${notes}`;
-        const quiz = JSON.parse(await callGeminiAPI(quizPrompt, true));
+        const quiz = JSON.parse(await callOpenRouterAPI(quizPrompt, true));
         generatedData.quiz = quiz;
         
         quizState = { currentQuestionIndex: 0, score: 0 };
