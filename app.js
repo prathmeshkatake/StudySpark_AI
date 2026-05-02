@@ -151,7 +151,8 @@ async function callGeminiAPI(prompt, isJson = false) {
             // Switch to next key for ANY error (expired, invalid, rate limit)
             currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
             attempts++;
-            showToast(`API Limit Reached or Key Invalid. Please go to API Setup to add a new key.`, 'error');
+            // Show the EXACT error from Google
+            showToast(`Key Failed: ${error.message}`, 'error');
         }
     }
     throw new Error('All local API keys exhausted or invalid. Please add fresh keys in the API Setup tab.');
