@@ -375,38 +375,7 @@ function exportWordDoc() {
     showToast('Word Document downloaded!', 'success');
 }
 
-function exportCleanPDF() {
-    showToast('Generating clean PDF...');
-    const html = getExportHTML();
-    const title = document.getElementById('summary-topic-title').innerText;
-    
-    // Create an invisible iframe to render the white HTML for the PDF engine
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '800px';
-    iframe.style.height = '1120px';
-    iframe.style.top = '-9999px';
-    document.body.appendChild(iframe);
-    
-    iframe.contentWindow.document.open();
-    iframe.contentWindow.document.write(html);
-    iframe.contentWindow.document.close();
-    
-    const opt = {
-        margin:       0.5,
-        filename:     `${title}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    
-    setTimeout(() => {
-        html2pdf().set(opt).from(iframe.contentWindow.document.body).save().then(() => {
-            document.body.removeChild(iframe);
-            showToast('PDF downloaded successfully!', 'success');
-        });
-    }, 500); // give iframe time to render text
-}
+
 
 // --- Admin Panel Logic ---
 function unlockAdmin() {
