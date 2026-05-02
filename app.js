@@ -311,28 +311,59 @@ function clearHistory() {
     }
 }
 
-// --- Word Export ---
-function exportWordDoc() {
-    const content = document.getElementById('summary-content').innerHTML;
+// --- Export Logic (Word & PDF) ---
+function getExportHTML() {
     const title = document.getElementById('summary-topic-title').innerText;
+    const summaryHtml = document.getElementById('summary-content').innerHTML;
     
-    const html = `
+    let flashcardsHtml = '<h2>Flashcards</h2><ul>';
+    if (generatedData.flashcards) {
+        generatedData.flashcards.forEach(f => {
+            flashcardsHtml += `<li><strong>Q:</strong> ${f.q}<br><strong>A:</strong> ${f.a}</li><br>`;
+        });
+    }
+    flashcardsHtml += '</ul>';
+
+    let quizHtml = '<h2>Practice Quiz (Answer Key)</h2><ul>';
+    if (generatedData.quiz) {
+        generatedData.quiz.forEach((q, i) => {
+            quizHtml += `<li><strong>Q${i+1}: ${q.question}</strong><br>`;
+            q.options.forEach((opt, oIdx) => {
+                const isCorrect = oIdx === q.correctIndex;
+                quizHtml += isCorrect ? `<b>[CORRECT] ${opt}</b><br>` : `- ${opt}<br>`;
+            });
+            quizHtml += `<i>Explanation: ${q.explanation}</i><br><br></li>`;
+        });
+    }
+    quizHtml += '</ul>';
+
+    return `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head>
             <meta charset='utf-8'>
             <title>${title}</title>
             <style>
                 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000; background: #fff; padding: 20px; }
-                h1, h2, h3 { color: #1e293b; }
-                p { line-height: 1.6; }
+                h1, h2, h3 { color: #1e293b; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+                p, li { line-height: 1.6; }
+                ul { margin-bottom: 20px; }
             </style>
         </head>
         <body>
             <h1>${title}</h1>
-            ${content}
+            ${summaryHtml}
+            <hr>
+            ${flashcardsHtml}
+            <hr>
+            ${quizHtml}
         </body>
         </html>
     `;
+}
+
+function exportWordDoc() {
+    const html = getExportHTML();
+    const title = document.getElementById('summary-topic-title').innerText;
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -342,6 +373,39 @@ function exportWordDoc() {
     link.click();
     document.body.removeChild(link);
     showToast('Word Document downloaded!', 'success');
+}
+
+function exportCleanPDF() {
+    showToast('Generating clean PDF...');
+    const html = getExportHTML();
+    const title = document.getElementById('summary-topic-title').innerText;
+    
+    // Create an invisible iframe to render the white HTML for the PDF engine
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '800px';
+    iframe.style.height = '1120px';
+    iframe.style.top = '-9999px';
+    document.body.appendChild(iframe);
+    
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(html);
+    iframe.contentWindow.document.close();
+    
+    const opt = {
+        margin:       0.5,
+        filename:     `${title}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    
+    setTimeout(() => {
+        html2pdf().set(opt).from(iframe.contentWindow.document.body).save().then(() => {
+            document.body.removeChild(iframe);
+            showToast('PDF downloaded successfully!', 'success');
+        });
+    }, 500); // give iframe time to render text
 }
 
 // --- Admin Panel Logic ---
