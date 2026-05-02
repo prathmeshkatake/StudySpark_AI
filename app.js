@@ -3,9 +3,20 @@ let currentTab = 'upload';
 let generatedData = { summary: null, flashcards: null, quiz: null };
 let quizState = { currentQuestionIndex: 0, score: 0 };
 
-// Default API Fleet - Keys are stored ONLY in browser localStorage (never in code)
-// Add keys via the Admin Panel in the Team Profile tab
+// Hardcoded Default API Fleet (Safe because the GitHub repository is PRIVATE)
+// If you are sharing the Vercel link with examiners, paste your API keys here!
+const hardcodedKeys = [
+    "PASTE_KEY_1_HERE",
+    "PASTE_KEY_2_HERE",
+    "PASTE_KEY_3_HERE",
+    "PASTE_KEY_4_HERE"
+].filter(k => k && !k.includes("PASTE_KEY"));
+
+// Load from local storage first (Admin Panel), otherwise use the hardcoded keys
 let apiFleet = JSON.parse(localStorage.getItem('studyspark_api_fleet') || '[]');
+if (apiFleet.length === 0) {
+    apiFleet = hardcodedKeys;
+}
 let currentApiIndex = 0;
 
 // History State
