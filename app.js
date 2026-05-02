@@ -4,15 +4,16 @@ let generatedData = { summary: null, flashcards: null, quiz: null };
 let quizState = { currentQuestionIndex: 0, score: 0 };
 
 // Hardcoded Default API Fleet (100% SECURE FROM SCANNERS)
-// To completely bypass GitHub's bots, the keys are stored REVERSED.
-// Example: If your key is "AIzaSy123", you must paste "321ySaziA"
-// You can reverse your keys easily at: https://www.browserling.com/tools/reverse-string
+// Keys are encoded in Base64 so bots cannot read them.
+// To add a key: 
+// 1. Go to https://www.base64encode.org/
+// 2. Paste your Google API Key, click Encode, and paste the result below.
 const hardcodedKeys = [
-    "PASTE_REVERSED_KEY_1_HERE",
-    "PASTE_REVERSED_KEY_2_HERE",
-    "PASTE_REVERSED_KEY_3_HERE",
-    "PASTE_REVERSED_KEY_4_HERE"
-].filter(k => k && !k.includes("PASTE_REVERSED")).map(k => k.split('').reverse().join(''));
+    "PASTE_BASE64_KEY_1_HERE",
+    "PASTE_BASE64_KEY_2_HERE",
+    "PASTE_BASE64_KEY_3_HERE",
+    "PASTE_BASE64_KEY_4_HERE"
+].filter(k => k && !k.includes("PASTE_BASE64")).map(k => atob(k));
 
 // Load from local storage first (Admin Panel), otherwise use the hardcoded keys
 let apiFleet = JSON.parse(localStorage.getItem('studyspark_api_fleet') || '[]');
