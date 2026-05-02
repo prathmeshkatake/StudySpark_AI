@@ -179,25 +179,22 @@ async function callGeminiAPI(prompt, isJson = false) {
             });
 
             if (!response.ok) {
-                if (response.status === 429) throw new Error("QUOTA_EXCEEDED");
-                const errData = await response.json();
-                throw new Error(errData.error?.message || 'API request failed');
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error?.message || `HTTP ${response.status}`);
             }
 
             const data = await response.json();
             return data.candidates[0].content.parts[0].text;
             
         } catch (error) {
-            if (error.message === "QUOTA_EXCEEDED" || error.message.includes("429")) {
-                currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
-                attempts++;
-                showToast('API Limit Reached. Switching to backup key...', 'info');
-            } else {
-                throw error;
-            }
+            console.warn(`Local Key ${currentApiIndex + 1} failed:`, error.message);
+            // Switch to next key for ANY error (expired, invalid, rate limit)
+            currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
+            attempts++;
+            showToast(`Key failed. Auto-switching to backup key (${attempts}/${apiFleet.length})...`, 'info');
         }
     }
-    throw new Error('All local API keys exhausted. Try again in a minute.');
+    throw new Error('All local API keys exhausted or invalid. Please add fresh keys in the Admin Panel.');
 }
 
 
