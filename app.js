@@ -131,8 +131,9 @@ async function handleFileUpload(event) {
 const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbzL_lHtlWjyEeT8cQYyy1ITCNP_yDVxQX-d75eE5ZNB-wdf3CMHBp1BmCKygjtN62nS/exec';
 
 async function callGeminiAPI(prompt, isJson = false) {
+    let proxyErrorMsg = '';
     try {
-        // Use text/plain content-type to avoid CORS preflight (required for Google Apps Script)
+        // Try the Google Apps Script Proxy first
         const response = await fetch(GAS_PROXY_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
@@ -140,20 +141,63 @@ async function callGeminiAPI(prompt, isJson = false) {
             redirect: 'follow'
         });
 
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || `Server error: ${response.status}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (!data.error) return data.text;
+            proxyErrorMsg = data.error;
+        } else {
+            proxyErrorMsg = `Server error: ${response.status}`;
         }
-
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        return data.text;
-
     } catch (error) {
-        console.error('GAS Proxy error:', error.message);
-        showToast(`Generation Failed: ${error.message}`, 'error');
-        throw error;
+        proxyErrorMsg = error.message;
     }
+
+    console.warn('GAS Proxy failed, trying local Admin keys...', proxyErrorMsg);
+
+    // Fallback: Try local keys from Admin Panel (stored in localStorage)
+    if (apiFleet.length === 0) {
+        showToast(`Server failed (${proxyErrorMsg}) and no local keys found. Add keys in API Admin tab.`, 'error');
+        throw new Error('No API keys configured.');
+    }
+
+    let attempts = 0;
+    while (attempts < apiFleet.length) {
+        const apiKey = apiFleet[currentApiIndex];
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        
+        const requestBody = {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2 }
+        };
+        if (isJson) requestBody.generationConfig.responseMimeType = "application/json";
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                if (response.status === 429) throw new Error("QUOTA_EXCEEDED");
+                const errData = await response.json();
+                throw new Error(errData.error?.message || 'API request failed');
+            }
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+            
+        } catch (error) {
+            if (error.message === "QUOTA_EXCEEDED" || error.message.includes("429")) {
+                currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
+                attempts++;
+                showToast('API Limit Reached. Switching to backup key...', 'info');
+            } else {
+                throw error;
+            }
+        }
+    }
+    throw new Error('All local API keys exhausted. Try again in a minute.');
 }
 
 
