@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySpark AI - Smart Learning Assistant</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                            950: '#042f2e',
+                        },
+                        darkbg: '#0f172a',
+                        darkcard: '#1e293b',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Marked (Markdown Parser) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-darkbg text-slate-200 font-sans min-h-screen flex selection:bg-brand-500 selection:text-white">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-darkcard border-r border-slate-700/50 flex flex-col fixed h-full z-10 transition-transform duration-300">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-brand-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
+                <i class="fa-solid fa-bolt"></i> StudySpark AI
+            </h1>
+        </div>
+
+        <nav class="flex-1 px-4 space-y-2 mt-4">
+            <button onclick="switchTab('upload')" id="nav-upload" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 bg-brand-500/10 text-brand-400 font-medium">
+                <i class="fa-solid fa-file-arrow-up w-5"></i> Upload Notes
+            </button>
+            <button onclick="switchTab('summary')" id="nav-summary" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-list-check w-5"></i> Smart Summary
+            </button>
+            <button onclick="switchTab('flashcards')" id="nav-flashcards" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-layer-group w-5"></i> Flashcards
+            </button>
+            <button onclick="switchTab('quiz')" id="nav-quiz" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-clipboard-question w-5"></i> Practice Quiz
+            </button>
+            <button onclick="switchTab('profile')" id="nav-profile" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-users w-5"></i> Team Profile
+            </button>
+        </nav>
+
+        <!-- API Key Config -->
+        <div class="p-4 mt-auto border-t border-slate-700/50 bg-slate-800/30">
+            <label class="block text-xs font-semibold text-slate-400 mb-2">APP PASSWORD</label>
+            <div class="relative">
+                <input type="password" id="app-password-input" placeholder="Enter password..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                <button onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                    <i class="fa-solid fa-eye" id="pwd-eye-icon"></i>
+                </button>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2">Required to unlock AI features.</p>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-64 flex-1 p-8 h-screen overflow-y-auto custom-scrollbar">
+        
+        <!-- Tab: Upload -->
+        <section id="tab-upload" class="tab-content block max-w-4xl mx-auto animation-fade-in">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">Transform Your Notes</h2>
+                <p class="text-slate-400">Paste your unstructured notes below, and let AI organize them into a complete study plan.</p>
+            </header>
+
+            <div class="bg-darkcard border border-slate-700/50 rounded-2xl p-6 shadow-xl relative glass-panel">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-slate-200 flex items-center gap-2"><i class="fa-solid fa-align-left text-brand-500"></i> Raw Text Input</h3>
+                    <div class="flex items-center gap-4">
+                        <label class="cursor-pointer text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-file-arrow-up"></i> Upload File
+                            <input type="file" id="file-upload" accept=".txt,.csv,.pdf" class="hidden" onchange="handleFileUpload(event)">
+                        </label>
+                        <button onclick="clearNotes()" class="text-xs text-slate-500 hover:text-red-400 transition-colors"><i class="fa-solid fa-trash"></i> Clear</button>
+                    </div>
+                </div>
+                <textarea id="notes-input" rows="12" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none custom-scrollbar" placeholder="e.g. Photosynthesis is a process used by plants and other organisms to convert light energy into chemical energy... Or upload a PDF/TXT file using the button above!"></textarea>
+                
+                <div class="mt-6 flex justify-end">
+                    <button onclick="processNotes()" id="process-btn" class="bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white px-8 py-3 rounded-xl font-medium shadow-lg shadow-brand-500/25 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Study Material
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Summary -->
+        <section id="tab-summary" class="tab-content hidden max-w-4xl mx-auto animation-fade-in">
+            <header class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-bold text-white mb-2">Smart Summary</h2>
+                    <p class="text-slate-400">Your notes, distilled into key concepts and bullet points.</p>
+                </div>
+                <button onclick="copyToClipboard('summary-content')" class="text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <i class="fa-regular fa-copy"></i> Copy
+                </button>
+            </header>
+
+            <div id="summary-container" class="bg-darkcard border border-slate-700/50 rounded-2xl p-8 shadow-xl glass-panel min-h-[400px]">
+                <!-- Empty State -->
+                <div id="summary-empty" class="h-full flex flex-col items-center justify-center text-center py-20 text-slate-500">
+                    <i class="fa-solid fa-file-shield text-5xl mb-4 opacity-50"></i>
+                    <p>No summary generated yet.</p>
+                    <p class="text-sm mt-1">Upload notes and click 'Generate Study Material' to see the magic.</p>
+                    <button onclick="switchTab('upload')" class="mt-4 text-brand-400 hover:text-brand-300 text-sm font-medium">Go to Upload <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                </div>
+                
+                <!-- Loading State -->
+                <div id="summary-loading" class="hidden h-full flex flex-col items-center justify-center text-center py-20">
+                    <div class="loader mb-6"></div>
+                    <p class="text-brand-400 font-medium animate-pulse">Analyzing context & extracting key points...</p>
+                </div>
+
+                <!-- Content State -->
+                <div id="summary-content" class="hidden prose prose-invert prose-brand max-w-none">
+                    <!-- Markdown content injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Flashcards -->
+        <section id="tab-flashcards" class="tab-content hidden max-w-5xl mx-auto animation-fade-in">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">Interactive Flashcards</h2>
+                <p class="text-slate-400">Click a card to flip it and reveal the answer.</p>
+            </header>
+
+            <div id="flashcards-container" class="min-h-[400px]">
+                <!-- Empty State -->
+                <div id="flashcards-empty" class="bg-darkcard border border-slate-700/50 rounded-2xl flex flex-col items-center justify-center text-center py-20 text-slate-500 glass-panel">
+                    <i class="fa-solid fa-layer-group text-5xl mb-4 opacity-50"></i>
+                    <p>No flashcards generated yet.</p>
+                </div>
+                
+                <!-- Loading State -->
+                <div id="flashcards-loading" class="hidden bg-darkcard border border-slate-700/50 rounded-2xl flex flex-col items-center justify-center text-center py-20 glass-panel">
+                    <div class="loader mb-6"></div>
+                    <p class="text-brand-400 font-medium animate-pulse">Designing smart flashcards...</p>
+                </div>
+
+                <!-- Cards Grid -->
+                <div id="flashcards-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Flashcards injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Quiz -->
+        <section id="tab-quiz" class="tab-content hidden max-w-3xl mx-auto animation-fade-in">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">Practice Quiz</h2>
+                <p class="text-slate-400">Test your knowledge with AI-generated multiple choice questions.</p>
+            </header>
+
+            <div class="bg-darkcard border border-slate-700/50 rounded-2xl shadow-xl glass-panel min-h-[400px] overflow-hidden">
+                <!-- Empty State -->
+                <div id="quiz-empty" class="h-full flex flex-col items-center justify-center text-center py-20 text-slate-500">
+                    <i class="fa-solid fa-clipboard-question text-5xl mb-4 opacity-50"></i>
+                    <p>No quiz generated yet.</p>
+                </div>
+                
+                <!-- Loading State -->
+                <div id="quiz-loading" class="hidden h-full flex flex-col items-center justify-center text-center py-20">
+                    <div class="loader mb-6"></div>
+                    <p class="text-brand-400 font-medium animate-pulse">Formulating challenging questions...</p>
+                </div>
+
+                <!-- Quiz Content State -->
+                <div id="quiz-content" class="hidden flex flex-col h-full">
+                    <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/30">
+                        <span class="text-sm font-semibold text-slate-400 tracking-wider">QUESTION <span id="quiz-current-q" class="text-brand-400 text-lg">1</span> / <span id="quiz-total-q">5</span></span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500">Score:</span>
+                            <span id="quiz-score" class="font-bold text-white px-3 py-1 bg-slate-700 rounded-full">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-8 flex-1">
+                        <h3 id="quiz-question-text" class="text-xl font-semibold text-white mb-8 leading-relaxed"></h3>
+                        
+                        <div id="quiz-options" class="space-y-3">
+                            <!-- Options injected here -->
+                        </div>
+                    </div>
+
+                    <div id="quiz-feedback-area" class="hidden p-6 border-t border-slate-700/50 bg-slate-800/50 flex justify-between items-center">
+                        <div id="quiz-feedback-text" class="font-medium"></div>
+                        <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="bg-brand-600 hover:bg-brand-500 text-white px-6 py-2 rounded-lg font-medium transition-colors">Next Question <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    </div>
+
+                    <!-- Quiz Results State -->
+                    <div id="quiz-results" class="hidden p-12 text-center flex flex-col items-center justify-center">
+                        <div class="w-24 h-24 bg-brand-500/20 text-brand-400 rounded-full flex items-center justify-center text-4xl mb-6 shadow-[0_0_30px_rgba(20,184,166,0.3)]">
+                            <i class="fa-solid fa-trophy"></i>
+                        </div>
+                        <h3 class="text-3xl font-bold text-white mb-2">Quiz Completed!</h3>
+                        <p class="text-slate-400 text-lg mb-8">You scored <span id="quiz-final-score" class="font-bold text-brand-400 text-2xl mx-1"></span> out of <span id="quiz-final-total" class="font-bold text-white mx-1"></span></p>
+                        <button onclick="resetQuiz()" class="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 rounded-xl font-medium transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-rotate-right"></i> Retake Quiz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Profile -->
+        <section id="tab-profile" class="tab-content hidden max-w-4xl mx-auto animation-fade-in">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-white mb-2">Team Profile</h2>
+                <p class="text-slate-400">Meet the builders behind StudySpark AI.</p>
+            </header>
+
+            <div class="bg-darkcard border border-slate-700/50 rounded-2xl p-8 shadow-xl glass-panel text-center">
+                <div class="w-24 h-24 bg-gradient-to-br from-brand-400 to-blue-600 rounded-2xl mx-auto flex items-center justify-center text-4xl shadow-lg shadow-brand-500/30 mb-6 transform rotate-3">
+                    <i class="fa-solid fa-code text-white -rotate-3"></i>
+                </div>
+                <h3 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-400 mb-2">Code Champs</h3>
+                <p class="text-slate-400 mb-8 uppercase tracking-widest text-sm font-semibold">PASC Hackathon Team</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left max-w-3xl mx-auto">
+                    <!-- Members -->
+                    <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex items-center gap-4 hover:border-brand-500/50 transition-colors">
+                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-brand-400"><i class="fa-solid fa-user"></i></div>
+                        <span class="font-medium text-slate-200">Prathmesh Katake</span>
+                    </div>
+                    <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex items-center gap-4 hover:border-brand-500/50 transition-colors">
+                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-brand-400"><i class="fa-solid fa-user"></i></div>
+                        <span class="font-medium text-slate-200">Parth Chavan</span>
+                    </div>
+                    <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex items-center gap-4 hover:border-brand-500/50 transition-colors">
+                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-brand-400"><i class="fa-solid fa-user"></i></div>
+                        <span class="font-medium text-slate-200">Akshay DeshMukh</span>
+                    </div>
+                    <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex items-center gap-4 hover:border-brand-500/50 transition-colors">
+                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-brand-400"><i class="fa-solid fa-user"></i></div>
+                        <span class="font-medium text-slate-200">Agrim Goel</span>
+                    </div>
+                    <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex items-center gap-4 hover:border-brand-500/50 transition-colors">
+                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-brand-400"><i class="fa-solid fa-user"></i></div>
+                        <span class="font-medium text-slate-200">Ishan Anand</span>
+                    </div>
+                </div>
+
+                <!-- Admin Settings -->
+                <div class="mt-12 max-w-xl mx-auto border-t border-slate-700/50 pt-8 text-left">
+                    <h4 class="text-sm font-semibold text-slate-400 mb-4 tracking-wider uppercase"><i class="fa-solid fa-gear mr-2"></i> Admin Settings</h4>
+                    <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-5">
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Override API Key (Optional)</label>
+                        <p class="text-xs text-slate-500 mb-4">If the default quota runs out during the demo, paste a new Gemini API key here to override it instantly. <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-brand-400 hover:underline">Get free key</a></p>
+                        <div class="relative">
+                            <input type="password" id="override-api-key" placeholder="Paste backup API key here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                            <button onclick="toggleOverrideVisibility()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                <i class="fa-solid fa-eye" id="override-eye-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Global Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 transition-all duration-300 z-50 bg-slate-800 border border-slate-700 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-brand-400 text-xl"></i>
+        <div class="flex flex-col">
+            <span id="toast-title" class="font-semibold text-sm">Notification</span>
+            <span id="toast-message" class="text-xs text-slate-400">Action completed successfully.</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
