@@ -134,7 +134,7 @@ async function callOpenRouterAPI(prompt, isJson = false) {
         const url = `https://openrouter.ai/api/v1/chat/completions`;
         
         const requestBody = {
-            model: "meta-llama/llama-3.3-70b-instruct:free",
+            model: "openrouter/free",
             messages: [{ role: "user", content: finalPrompt }],
             temperature: 0.2
         };
