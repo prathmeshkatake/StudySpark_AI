@@ -129,7 +129,7 @@ async function handleFileUpload(event) {
 
 // --- Secure API Call via Vercel Proxy ---
 async function callGeminiAPI(prompt, isJson = false) {
-    // First try the secure server-side proxy (keys stored in Vercel env vars)
+    // Try the secure server-side proxy first (keys stored in Vercel env vars)
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
@@ -137,28 +137,34 @@ async function callGeminiAPI(prompt, isJson = false) {
             body: JSON.stringify({ prompt, isJson })
         });
 
+        const data = await response.json(); // Read ONCE
+
         if (response.ok) {
-            const data = await response.json();
             return data.text;
         }
 
-        // If proxy returns 429, all server keys exhausted
-        if (response.status === 429) {
+        // Server has no keys configured (500) - fall through to local keys
+        if (response.status === 500) {
+            console.warn('Server has no keys, trying local keys...');
+        } else if (response.status === 429) {
+            // All server keys exhausted - fall through to local keys
             console.warn('Server keys exhausted, trying local keys...');
         } else {
-            const errData = await response.json();
-            // If it's a real error (not just missing keys), throw it
-            if (response.status !== 500) {
-                throw new Error(errData.error || 'API request failed');
-            }
+            // Real error (bad prompt, auth etc) - throw immediately
+            throw new Error(data.error || 'API request failed');
         }
     } catch (proxyError) {
-        console.warn('Proxy unavailable, trying local keys...', proxyError.message);
+        // Only fall through if it's a network error, not our thrown errors
+        if (proxyError.message !== 'API request failed') {
+            console.warn('Proxy call failed, trying local keys...', proxyError.message);
+        } else {
+            throw proxyError;
+        }
     }
 
     // Fallback: Try local keys from Admin Panel (stored in localStorage)
     if (apiFleet.length === 0) {
-        showToast('No API keys available! Add keys in the API Admin tab.', 'error');
+        showToast('No API keys available! Please add keys in the API Admin tab or set Vercel env vars.', 'error');
         throw new Error('No API keys configured.');
     }
 
