@@ -3,14 +3,9 @@ let currentTab = 'upload';
 let generatedData = { summary: null, flashcards: null, quiz: null };
 let quizState = { currentQuestionIndex: 0, score: 0 };
 
-// Default API Fleet (Auto-Switching) - Obfuscated to prevent GitHub Secret Scanner blocks
-let apiFleet = [
-    ['AIzaSy', 'D3NK-1q-', '0PcgWEzo', 'jciUloxn', 'qLf8lwojc'].join(''), // Original
-    ['AIzaSy', 'C1C4V5N_', 'taXVGhwh', 'IvqQM2f5', 'RK16eLwo8'].join(''),
-    ['AIzaSy', 'DrASfBgD', 'TO-bkE_l', '_-uoPN1n', 'jW70l8TMA'].join(''),
-    ['AIzaSy', 'DmG6z5DF', '-X68LHPf', 'yxd57y3_', 'gkezu-rEI'].join(''),
-    ['AIzaSy', 'DlGn2r9j', 'Xn-T6fuY', 'dajxbo-j', 'OTb1juRng'].join('')
-];
+// Default API Fleet - Keys are stored ONLY in browser localStorage (never in code)
+// Add keys via the Admin Panel in the Team Profile tab
+let apiFleet = JSON.parse(localStorage.getItem('studyspark_api_fleet') || '[]');
 let currentApiIndex = 0;
 
 // History State
@@ -134,7 +129,10 @@ async function handleFileUpload(event) {
 
 // --- API Fleet Auto-Switching Logic ---
 async function callGeminiAPI(prompt, isJson = false) {
-    if (apiFleet.length === 0) throw new Error("No API keys available in the fleet.");
+    if (apiFleet.length === 0) {
+        showToast('No API keys configured! Go to API Admin tab to add your keys.', 'error');
+        throw new Error("No API keys found. Please add keys in the API Admin panel.");
+    }
 
     let attempts = 0;
     while (attempts < apiFleet.length) {
