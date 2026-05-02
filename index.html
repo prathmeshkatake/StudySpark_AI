@@ -163,8 +163,8 @@
                     <p class="text-slate-400">Your notes, distilled into key concepts and bullet points.</p>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="exportSummaryPDF()" class="text-sm bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
-                        <i class="fa-solid fa-file-pdf"></i> Export PDF
+                    <button onclick="exportWordDoc()" class="text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-file-word"></i> Export Word
                     </button>
                     <button onclick="copyToClipboard('summary-content')" class="text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
                         <i class="fa-regular fa-copy"></i> Copy
@@ -235,17 +235,26 @@
                 </div>
 
                 <div id="quiz-content" class="hidden flex flex-col h-full">
-                    <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/30">
+                    <div class="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/30" id="quiz-header">
                         <span class="text-sm font-semibold text-slate-400 tracking-wider">QUESTION <span id="quiz-current-q" class="text-brand-400 text-lg">1</span> / <span id="quiz-total-q">5</span></span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-500">Score:</span>
-                            <span id="quiz-score" class="font-bold text-white px-3 py-1 bg-slate-700 rounded-full">0</span>
+                        <div class="flex items-center gap-4">
+                            <button onclick="showAnswerKey()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-slate-300 transition-colors"><i class="fa-solid fa-list-check"></i> Answer Key</button>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500">Score:</span>
+                                <span id="quiz-score" class="font-bold text-white px-3 py-1 bg-slate-700 rounded-full">0</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="p-8 flex-1">
+                    <div class="p-8 flex-1" id="quiz-q-area">
                         <h3 id="quiz-question-text" class="text-xl font-semibold text-white mb-8 leading-relaxed"></h3>
                         <div id="quiz-options" class="space-y-3"></div>
+                    </div>
+
+                    <div id="quiz-answer-key" class="hidden p-8 flex-1 overflow-y-auto max-h-[500px] custom-scrollbar text-left">
+                        <h3 class="text-2xl font-bold text-white mb-6 border-b border-slate-700/50 pb-4">Answer Key</h3>
+                        <div id="answer-key-list" class="space-y-8"></div>
+                        <button onclick="hideAnswerKey()" class="mt-8 bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg transition-colors"><i class="fa-solid fa-arrow-left"></i> Back to Quiz</button>
                     </div>
 
                     <div id="quiz-feedback-area" class="hidden p-6 border-t border-slate-700/50 bg-slate-800/50 flex justify-between items-center">

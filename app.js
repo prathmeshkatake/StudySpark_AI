@@ -311,18 +311,37 @@ function clearHistory() {
     }
 }
 
-// --- PDF Export ---
-function exportSummaryPDF() {
-    const element = document.getElementById('summary-export-wrapper');
-    const opt = {
-        margin:       1,
-        filename:     `${document.getElementById('summary-topic-title').innerText}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, backgroundColor: '#1e293b' },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    showToast('Generating PDF...');
-    html2pdf().set(opt).from(element).save();
+// --- Word Export ---
+function exportWordDoc() {
+    const content = document.getElementById('summary-content').innerHTML;
+    const title = document.getElementById('summary-topic-title').innerText;
+    
+    const html = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+            <meta charset='utf-8'>
+            <title>${title}</title>
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000; background: #fff; padding: 20px; }
+                h1, h2, h3 { color: #1e293b; }
+                p { line-height: 1.6; }
+            </style>
+        </head>
+        <body>
+            <h1>${title}</h1>
+            ${content}
+        </body>
+        </html>
+    `;
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${title}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Word Document downloaded!', 'success');
 }
 
 // --- Admin Panel Logic ---
@@ -534,4 +553,59 @@ function resetQuiz() {
     document.getElementById('quiz-content').children[1].classList.remove('hidden');
     document.getElementById('quiz-next-btn').innerHTML = 'Next Question <i class="fa-solid fa-arrow-right ml-1"></i>';
     renderQuizQuestion();
+}
+
+// --- Answer Key Logic ---
+function showAnswerKey() {
+    if (!generatedData.quiz) return;
+    
+    document.getElementById('quiz-header').classList.add('hidden');
+    document.getElementById('quiz-q-area').classList.add('hidden');
+    document.getElementById('quiz-feedback-area').classList.add('hidden');
+    document.getElementById('quiz-feedback-area').classList.remove('flex');
+    document.getElementById('quiz-results').classList.add('hidden');
+    document.getElementById('quiz-results').classList.remove('flex');
+    
+    const akList = document.getElementById('answer-key-list');
+    akList.innerHTML = '';
+    
+    generatedData.quiz.forEach((q, idx) => {
+        let optionsHtml = '';
+        q.options.forEach((opt, oIdx) => {
+            const isCorrect = oIdx === q.correctIndex;
+            const style = isCorrect ? 'text-brand-400 font-bold' : 'text-slate-400';
+            const icon = isCorrect ? '<i class="fa-solid fa-check mr-2"></i>' : '';
+            optionsHtml += `<li class="${style} mb-1">${icon}${opt}</li>`;
+        });
+        
+        akList.insertAdjacentHTML('beforeend', `
+            <div class="bg-slate-800/30 p-5 rounded-xl border border-slate-700/50">
+                <h4 class="text-lg font-semibold text-white mb-3">Q${idx + 1}: ${q.question}</h4>
+                <ul class="list-none mb-4 pl-2">${optionsHtml}</ul>
+                <div class="bg-brand-500/10 border border-brand-500/20 p-3 rounded-lg text-sm text-slate-300">
+                    <span class="text-brand-400 font-bold mr-1">Explanation:</span> ${q.explanation}
+                </div>
+            </div>
+        `);
+    });
+    
+    document.getElementById('quiz-answer-key').classList.remove('hidden');
+    document.getElementById('quiz-answer-key').classList.add('block');
+}
+
+function hideAnswerKey() {
+    document.getElementById('quiz-answer-key').classList.add('hidden');
+    document.getElementById('quiz-answer-key').classList.remove('block');
+    
+    document.getElementById('quiz-header').classList.remove('hidden');
+    if (quizState.currentQuestionIndex >= generatedData.quiz.length) {
+        document.getElementById('quiz-results').classList.remove('hidden');
+        document.getElementById('quiz-results').classList.add('flex');
+    } else {
+        document.getElementById('quiz-q-area').classList.remove('hidden');
+        if (document.getElementById('quiz-feedback-text').innerHTML !== '') {
+            document.getElementById('quiz-feedback-area').classList.remove('hidden');
+            document.getElementById('quiz-feedback-area').classList.add('flex');
+        }
+    }
 }
