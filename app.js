@@ -127,11 +127,39 @@ async function handleFileUpload(event) {
     event.target.value = '';
 }
 
-// --- API Fleet Auto-Switching Logic ---
+// --- Secure API Call via Vercel Proxy ---
 async function callGeminiAPI(prompt, isJson = false) {
+    // First try the secure server-side proxy (keys stored in Vercel env vars)
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, isJson })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            return data.text;
+        }
+
+        // If proxy returns 429, all server keys exhausted
+        if (response.status === 429) {
+            console.warn('Server keys exhausted, trying local keys...');
+        } else {
+            const errData = await response.json();
+            // If it's a real error (not just missing keys), throw it
+            if (response.status !== 500) {
+                throw new Error(errData.error || 'API request failed');
+            }
+        }
+    } catch (proxyError) {
+        console.warn('Proxy unavailable, trying local keys...', proxyError.message);
+    }
+
+    // Fallback: Try local keys from Admin Panel (stored in localStorage)
     if (apiFleet.length === 0) {
-        showToast('No API keys configured! Go to API Admin tab to add your keys.', 'error');
-        throw new Error("No API keys found. Please add keys in the API Admin panel.");
+        showToast('No API keys available! Add keys in the API Admin tab.', 'error');
+        throw new Error('No API keys configured.');
     }
 
     let attempts = 0;
@@ -143,7 +171,6 @@ async function callGeminiAPI(prompt, isJson = false) {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { temperature: 0.2 }
         };
-
         if (isJson) requestBody.generationConfig.responseMimeType = "application/json";
 
         try {
@@ -164,17 +191,15 @@ async function callGeminiAPI(prompt, isJson = false) {
             
         } catch (error) {
             if (error.message === "QUOTA_EXCEEDED" || error.message.includes("429")) {
-                console.warn(`API Key at index ${currentApiIndex} exhausted limit. Auto-switching...`);
                 currentApiIndex = (currentApiIndex + 1) % apiFleet.length;
                 attempts++;
-                showToast(`API Limit Reached. Switching to backup key...`, 'info');
-                // continue while loop to retry with next key
+                showToast('API Limit Reached. Switching to backup key...', 'info');
             } else {
-                throw error; // For generic errors like 400 Bad Request, fail immediately.
+                throw error;
             }
         }
     }
-    throw new Error('All API keys in the fleet have exceeded their quota.');
+    throw new Error('All API keys exhausted. Try again in a minute.');
 }
 
 // --- Core Processing Pipeline ---
